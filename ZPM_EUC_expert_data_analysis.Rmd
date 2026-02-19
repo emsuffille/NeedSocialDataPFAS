@@ -1,0 +1,393 @@
+---
+title: "ZPM_EUC_breakout"
+author: "Ellise Suffill"
+date: "2023-01-24"
+output: html_document
+editor_options: 
+  chunk_output_type: inline
+---
+
+# Views on the Essential Use Concept from ZeroPM Prevention Workshop attendees
+
+<br>
+
+## N = 46
+
+##
+
+<br>
+<br>
+<br>
+<br>
+
+```{r, include=FALSE, warning=FALSE}
+knitr::opts_chunk$set(tidy.opts = list(width.cutoff = 60), tidy = TRUE)
+library(tidyverse)
+library(ggplot2)
+library(dplyr)
+library(knitr)
+```
+
+```{r message=FALSE, warning=FALSE, include=FALSE, paged.print=FALSE}
+## Summarizes data.
+## Gives count, mean, standard deviation, standard error of the mean, and confidence interval (default 95%).
+##   data: a data frame.
+##   measurevar: the name of a column that contains the variable to be summariezed
+##   groupvars: a vector containing names of columns that contain grouping variables
+##   na.rm: a boolean that indicates whether to ignore NA's
+##   conf.interval: the percent range of the confidence interval (default is 95%)
+summarySE <- function(data=NULL, measurevar, groupvars=NULL, na.rm=FALSE,
+                      conf.interval=.95, .drop=TRUE) {
+  
+  library(plyr)
+
+    # New version of length which can handle NA's: if na.rm==T, don't count them
+    length2 <- function (x, na.rm=FALSE) {
+        if (na.rm) sum(!is.na(x))
+        else       length(x)
+    }
+
+    # This does the summary. For each group's data frame, return a vector with
+    # N, mean, and sd
+    datac <- ddply(data, groupvars, .drop=.drop,
+      .fun = function(xx, col) {
+        c(N    = length2(xx[[col]], na.rm=na.rm),
+          mean = mean   (xx[[col]], na.rm=na.rm),
+          sd   = sd     (xx[[col]], na.rm=na.rm)
+        )
+      },
+      measurevar
+    )
+
+    # Rename the "mean" column    
+    datac <- rename(datac, c("mean" = measurevar))
+
+    datac$se <- datac$sd / sqrt(datac$N)  # Calculate standard error of the mean
+
+    # Confidence interval multiplier for standard error
+    # Calculate t-statistic for confidence interval: 
+    # e.g., if conf.interval is .95, use .975 (above/below), and use df=N-1
+    ciMult <- qt(conf.interval/2 + .5, datac$N-1)
+    datac$ci <- datac$se * ciMult
+
+    return(datac)
+}
+```
+
+```{r, include=FALSE, warning=FALSE}
+data <- read.csv(file="~/Desktop/ESU_breakout/ZPM_ESU_breakout_February6.csv", header=T, sep=",",na.strings=c("","NA"))
+data <- data[-c(1,2), ] 
+data <- data %>% filter(!Progress>100)
+data <- data[,5:55]
+data <- data[,-c(6:9)]
+data <- data[,-c(3,4, 6:9)]
+
+cols = c("Q2_1", "Q2_2", "Q2_3",
+         "Q4_1","Q4_2","Q4_3","Q4_4","Q4_5","Q4_6","Q4_7",
+         "Q3_1","Q3_2","Q3_3","Q3_4","Q3_5",
+         "Q9_1","Q9_2","Q9_3","Q9_4","Q9_5",
+         "Q18_1", "Q18_2", "Q18_3", "Q18_4", "Q18_5", "Q18_6")
+data[c(cols)][is.na(data[c(cols)])] <- 0
+
+#rename cols
+data <- data %>% 
+  dplyr::rename(
+    enforceable = Q2_1,
+    effective = Q2_2,
+    understandable = Q2_3,
+    medical_items = Q4_1,
+    food_contact_materials = Q4_2,
+    cosmetics = Q4_3,
+    electronics = Q4_4,
+    toys = Q4_5,
+    sports_n_leisurewear = Q4_6,
+    building_construction = Q4_7,
+    medical_treatments = Q3_1,
+    human_health_crises_emergencies = Q3_2,
+    public_n_personal_safety = Q3_3,
+    animal_health_n_pest_control = Q3_4,
+    access_clean_water_food_shelter = Q3_5,
+    infrastructure_n_tech_4_modern_lifestyles = Q9_1,
+    social_risks_impacts_from_crises_emergencies = Q9_2,
+    cultural_intellectual_n_religious_aspects = Q9_3,
+    scientific_n_tech_advancement = Q9_4,
+    natural_environment_reduce_carbon_emissions = Q9_5,
+    performance_of_alternatives_too_poor = Q18_1,
+    industry_costs_too_high = Q18_2,
+    affects_consumer_satisfaction_sales = Q18_3,
+    consumer_costs_too_high = Q18_4,
+    data_evidence_lacking_4_alternatives = Q18_5,
+    comparable_risks_of_alternatives = Q18_6
+    )
+```
+
+
+## Enforceablity, effectiveness & understandability of EUC
+<br>
+Given the current definition of essential use, please rate how effective, enforceable and understandable the EUC is overall
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+q1_data <- data[,3:6]
+q1_data <- gather(q1_data, measure, percent, enforceable:understandable, factor_key=TRUE)
+q1_data$percent <- as.numeric(q1_data$percent)
+
+q1_data <- summarySE(q1_data, measurevar="percent", groupvars=c("measure"))
+
+p <- ggplot(q1_data, aes(x=measure, y=percent, fill=measure)) + 
+   geom_bar(stat="identity", position=position_dodge())+
+  geom_errorbar(aes(ymin=percent-se, ymax=percent+se), width=.2)+
+  geom_text(aes(label=round(percent, 0)), vjust=-3)
+p + scale_fill_brewer(palette="Paired") + theme_minimal()+theme(legend.position = "none")+
+  scale_y_continuous(name="Average rating (%)", limits=c(0, 100))+
+  theme(text = element_text(size = 20))+
+  theme(axis.title.x =element_blank())
+```
+
+<br>
+
+### Comments
+
+```{r, echo=FALSE, warning=FALSE}
+Q13 <- na.omit(data$Q13)
+Q13 <- as.data.frame(Q13)
+knitr::kable(Q13)
+```
+
+<br>
+<br>
+<br>
+<br>
+
+## Use of EUC across different domains
+<br>
+Across the different use domains below, how would you rate the priority of applying the EUC to the use of most harmful substances (e.g., 0 - of the lowest priority, the EUC should not be applied in these domains to ascertain whether a chemical use is essential; 100 - of the highest priority, the EUC should definitely be used in these domains to ascertain whether a chemical use is essential). 
+
+```{r, echo=FALSE}
+q2_data <- data[,8:14]
+q2_data <- gather(q2_data, measure, percent, medical_items:building_construction, factor_key=TRUE)
+q2_data$percent <- as.numeric(q2_data$percent)
+
+q2_data <- summarySE(q2_data, measurevar="percent", groupvars=c("measure"))
+
+p <- ggplot(q2_data, aes(x=measure, y=percent, fill=measure)) + 
+   geom_bar(stat="identity", position=position_dodge())+
+  geom_errorbar(aes(ymin=percent-se, ymax=percent+se), width=.2)+
+  xlab("Use domain") + ylab("Importance of applying\n the EUC (%)")+
+  geom_text(aes(label=round(percent, 0)), vjust=-3)+
+  ylim(0,100)
+p + scale_fill_brewer(palette="Paired") + theme_minimal()+theme(legend.position = "none")+
+  theme(text = element_text(size = 20))+
+  theme(axis.title.x =element_blank())+
+  theme(axis.text.x = element_text(angle = 65, hjust=1))
+```
+<br>
+
+### Comments
+
+```{r, echo=FALSE, warning=FALSE}
+Q14 <- na.omit(data$Q14)
+Q14 <- as.data.frame(Q14)
+knitr::kable(Q14)
+```
+
+<br>
+<br>
+<br>
+<br>
+
+## Importance of chemical functions for different aspects of health & safety
+<br>
+Please rate from 0 - not at all important, serving this function should not inform decisions to 100 - of the most importance, serving this function should inform decisions.
+
+```{r, echo=FALSE, warning=FALSE}
+q3_data <- data[,16:20]
+q3_data <- gather(q3_data, measure, percent, medical_treatments:access_clean_water_food_shelter,
+                  factor_key=TRUE)
+q3_data$percent <- as.numeric(q3_data$percent)
+
+q3_data <- summarySE(q3_data, measurevar="percent", groupvars=c("measure"))
+
+p <- ggplot(q3_data, aes(x=measure, y=percent, fill=measure)) + 
+   geom_bar(stat="identity", position=position_dodge())+
+  geom_errorbar(aes(ymin=percent-se, ymax=percent+se), width=.2)+
+  xlab("Chemical functions") + ylab("Importance for\n health & safety (%)")+
+  geom_text(aes(label=round(percent, 0)), vjust=-3)+
+  ylim(c(0,100))
+p + scale_fill_brewer(palette="Paired") + theme_minimal()+theme(legend.position = "none")+
+  theme(axis.text.x = element_text(angle = 65, hjust=1))
+```
+
+<br>
+
+### Comments
+
+```{r, echo=FALSE, warning=FALSE}
+Q15 <- na.omit(data$Q15)
+Q15 <- as.data.frame(Q15)
+knitr::kable(Q15)
+```
+
+<br>
+<br>
+<br>
+<br>
+
+## Importance of chemical functions for different aspects of functioning of society
+<br>
+Please rate the importance of each criterion from 0 - not at all important, serving this function should not inform decisions to 100 - of the most importance, serving this function should inform decisions
+```{r, echo=FALSE, warning=FALSE}
+q4_data <- data[,22:26]
+q4_data <- gather(q4_data, measure, percent,
+                  infrastructure_n_tech_4_modern_lifestyles:natural_environment_reduce_carbon_emissions,
+                  factor_key=TRUE)
+q4_data$percent <- as.numeric(q4_data$percent)
+
+q4_data <- summarySE(q4_data, measurevar="percent", groupvars=c("measure"))
+
+p <- ggplot(q4_data, aes(x=measure, y=percent, fill=measure)) + 
+   geom_bar(stat="identity", position=position_dodge())+
+  geom_errorbar(aes(ymin=percent-se, ymax=percent+se), width=.2)+
+  xlab("Chemical functions") + ylab("Importance for\n functioning of society (%)")+
+  geom_text(aes(label=round(percent, 0)), vjust=-3)+
+  ylim(c(0,100))
+p + scale_fill_brewer(palette="Paired") + theme_minimal()+theme(legend.position = "none")+
+  theme(axis.text.x = element_text(angle = 65, hjust=1))
+```
+
+<br>
+
+### Comments
+
+```{r, echo=FALSE, warning=FALSE}
+Q16 <- na.omit(data$Q16)
+Q16 <- as.data.frame(Q16)
+knitr::kable(Q16)
+```
+
+<br>
+<br>
+<br>
+<br>
+
+## Alternatives: potential barriers to substitution
+<br>
+Please rate these barriers by the difficulty they currently pose to successful substitution within the EUC (e.g., 0 - very easy, this issue poses no barrier to successful substitution of harmful chemical uses; 100 - very difficult, this issue poses a huge barrier to successful substitution of harmful chemicals, which currently cannot be overcome). 
+```{r, echo=FALSE, warning=FALSE}
+q5_data <- data[,28:33]
+q5_data <- gather(q5_data, measure, percent,
+                  performance_of_alternatives_too_poor:comparable_risks_of_alternatives,
+                  factor_key=TRUE)
+q5_data$percent <- as.numeric(q5_data$percent)
+
+q5_data <- summarySE(q5_data, measurevar="percent", groupvars=c("measure"))
+
+p <- ggplot(q5_data, aes(x=measure, y=percent, fill=measure)) + 
+   geom_bar(stat="identity", position=position_dodge())+
+  geom_errorbar(aes(ymin=percent-se, ymax=percent+se), width=.2)+
+  xlab("Potential barriers to\n successful alternatives") + ylab("Severity of issue (%)")+
+  geom_text(aes(label=round(percent, 0)), vjust=-3)+
+  ylim(c=0,100)
+p + scale_fill_brewer(palette="Paired") + theme_minimal()+theme(legend.position = "none")+
+  theme(text = element_text(size = 15))+
+  theme(axis.title.x =element_blank())+
+  theme(axis.text.x = element_text(angle = 65, hjust=1))
+```
+
+<br>
+
+### Comments
+
+```{r, echo=FALSE, warning=FALSE}
+Q19 <- na.omit(data$Q19)
+Q19 <- as.data.frame(Q19)
+knitr::kable(Q19)
+```
+
+<br>
+<br>
+<br>
+<br>
+
+## Implementation of the EUC
+<br>
+Given the current EUC definition, which of the following options would you most support regarding EUC implementation in chemicals policy?
+```{r, echo=FALSE, warning=FALSE}
+q6_data <- data$Q11
+q6_data <- as.data.frame(q6_data)
+q6_data$count <- rep(1, nrow(q6_data))
+q6_data$response <- ifelse(q6_data$q6_data=='No policy changes; EUC should not be implemented','No EUC implementation',
+                            ifelse(q6_data$q6_data=='The EUC should be implemented as a mandatory assessment only for certain use domains', 'EUC for certain domains',
+                            ifelse(q6_data$q6_data=='The EUC should be implemented as a mandatory assessment in all chemical regulations', 'EUC for all domains', ifelse(q6_data$q6_data=='Voluntary practice', 'Voluntary practice', 'No response'))))
+q6_data[is.na(q6_data)] <- 'No response'
+
+p <- ggplot(q6_data, aes(x=response, y=count, fill=response)) + 
+    geom_bar(stat="identity")+
+  xlab("How EUC should be implemented") + ylab("Response count")
+p + scale_fill_brewer(palette="Paired") + theme_minimal()+theme(legend.position = "none")+
+  theme(text = element_text(size = 15))+
+  theme(axis.title.x =element_blank())+
+  theme(axis.text.x = element_text(angle = 65, hjust=1))
+```
+
+<br>
+
+### Comments
+
+```{r, echo=FALSE, warning=FALSE}
+Q17 <- na.omit(data$Q17)
+Q17 <- as.data.frame(Q17)
+knitr::kable(Q17)
+```
+
+<br>
+<br>
+<br>
+<br>
+
+## Definition of the EUC - potential changes?
+<br>
+If you were to alter the current EUC definition, what changes would you make? If you'd like to include your own definition, please do so (type response below)
+```{r, echo=FALSE, warning=FALSE}
+Q5 <- na.omit(data$Q5)
+Q5 <- as.data.frame(Q5)
+knitr::kable(Q5)
+```
+
+<br>
+<br>
+<br>
+<br>
+
+## Responder demographics
+<br>
+```{r, echo=FALSE, warning=FALSE}
+q7_data <- data$Q8
+q7_data <- as.data.frame(q7_data)
+q7_data$count <- rep(1, nrow(q7_data))
+q7_data[is.na(q7_data)] <- 'No response'
+
+p <- ggplot(q7_data, aes(x=q7_data, y=count, fill=q7_data)) + 
+    geom_bar(stat="identity")+
+  xlab("Field of work") + ylab("Number of responders")
+  #scale_y_continuous(breaks = c(1:20))
+p + scale_fill_brewer(palette="Paired") + theme_minimal()+theme(legend.position = "none")+
+  theme(axis.text.x = element_text(angle = 65, hjust=1))+
+  ggtitle("Responders by field of work")
+```
+<br>
+<br>
+
+```{r, echo=FALSE, warning=FALSE}
+q8_data <- data$Q20
+q8_data <- as.data.frame(q8_data)
+q8_data$count <- rep(1, nrow(q8_data))
+q8_data[is.na(q8_data)] <- 'No response'
+
+p <- ggplot(q8_data, aes(x=q8_data, y=count, fill=q8_data)) + 
+    geom_bar(stat="identity")+
+  xlab("Gender") + ylab("Number of responders")
+  #scale_y_continuous(breaks = c(1:20))
+p + scale_fill_brewer(palette="Paired") + theme_minimal()+theme(legend.position = "none")+
+  theme(axis.text.x = element_text(angle = 65, hjust=1))+
+  ggtitle("Responders by gender")
+```
